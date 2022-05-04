@@ -1,0 +1,7 @@
+>from dataclasses import dataclass
+>from scanner.token import Token
+# This may not work for you
+Binary   | left: Expr  op: Token  right: Expr
+Unary    | op: Token  right: Expr
+Literal  | value: any
+Grouping | expr: Expr

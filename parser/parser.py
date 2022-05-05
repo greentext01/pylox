@@ -2,6 +2,7 @@ from parser.expr import Binary, Grouping, Literal, Unary
 from parser.parsing_error import ParseError
 
 import lox
+from parser.stmt import Expression, Print
 from scanner.token import Token
 from scanner.token_type import TokenType as tt
 
@@ -13,9 +14,30 @@ class Parser:
 
     def parse(self):
         try:
-            return self.expression()
+            statements = []
+
+            while not self.is_done():
+                statements.append(self.statement())
+
+            return statements
         except ParseError:
             return None
+
+    def statement(self):
+        if self.match(tt.PRINT):
+            return self.print_statement()
+        else:
+            return self.expression_statement()
+
+    def print_statement(self):
+        expr = self.expression()
+        self.expect(tt.SEMICOLON, "Expected ';' after value")
+        return Print(expr)
+
+    def expression_statement(self):
+        expr = self.expression()
+        self.expect(tt.SEMICOLON, "Expected ';' after expression")
+        return Expression(expr)
 
     def expression(self):
         return self.equality()
@@ -108,9 +130,6 @@ class Parser:
         if not self.is_done():
             self.current += 1
 
-    def is_done(self):
-        return self.current >= len(self.tokens)
-
     def peek(self):
         return self.tokens[self.current]
 
@@ -136,4 +155,7 @@ class Parser:
             ]:
                 return
 
-            self.advance()
+        self.advance()
+
+    def is_done(self):
+        return self.peek().type == tt.EOF

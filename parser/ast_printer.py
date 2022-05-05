@@ -1,6 +1,6 @@
 from parser import expr
 
-class AstPrinter(expr.Visitor):
+class AstPrinter(expr.ExprVisitor):
     def visit_binary_expr(self, expr: expr.Binary):
         return self.eval(expr.op.lexeme, expr.left, expr.right)
 

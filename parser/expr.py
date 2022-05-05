@@ -42,7 +42,7 @@ class Grouping(Expr):
         return visitor.visit_grouping_expr(self)
 
 
-class Visitor:
+class ExprVisitor:
     def visit_binary_expr(self, expr: Binary):
         pass
 

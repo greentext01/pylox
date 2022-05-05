@@ -121,7 +121,8 @@ class Scanner:
             # Ending "
             self.advance()
 
-            self.add_token(tt.STRING, self.source[self.start:self.current + 1])
+            # Cut off off both "
+            self.add_token(tt.STRING, self.source[self.start + 1:self.current - 1])
 
         # Find number literals
         elif c.isdigit():

@@ -1,20 +1,19 @@
+from interpreter.environment import Environment
 from interpreter.lox_runtime_error import LoxRuntimeError
-from parser.expr import Binary, Expr, Literal, Unary, ExprVisitor, Grouping
-from parser.stmt import Expression, Print, Stmt, StmtVisitor
+from parser.expr import Assign, Binary, Expr, Literal, Unary, ExprVisitor, Grouping, Variable
+from parser.stmt import Block, Expression, If, Print, Stmt, StmtVisitor, Var
 from scanner.token_type import TokenType as tt
 import lox
 
 
 class Interpreter(ExprVisitor, StmtVisitor):
-    def __init__(self, repl: bool):
-        self.repl = repl
+    def __init__(self):
+        self.environment = Environment()
 
     def interpret(self, stmts: list[Stmt]):
         try:
             for stmt in stmts:
-                result = self.run(stmt)
-                if self.repl:
-                    print(self.stringify(result))
+                self.run(stmt)
 
         except LoxRuntimeError as error:
             lox.Lox.runtime_error(error)
@@ -22,11 +21,31 @@ class Interpreter(ExprVisitor, StmtVisitor):
     def run(self, expr: Expr | Stmt):
         return expr.accept(self)
 
+    def execute_block(self, stmts: list[Stmt], environment: Environment):
+        previous = self.environment
+
+        try:
+            self.environment = environment
+
+            for stmt in stmts:
+                self.run(stmt)
+        finally:
+            self.environment = previous
+
+    def visit_block_stmt(self, expr: Block):
+        self.execute_block(expr.statements, Environment())
+
     def visit_literal_expr(self, expr: Literal):
         return expr.value
 
     def visit_grouping_expr(self, expr: Grouping):
         return self.run(expr.expr)
+
+    def visit_if_stmt(self, expr: If):
+        if self.is_truthy(self.run(expr.condition)):
+            self.run(expr.thenBranch)
+        elif expr.elseBranch != None:
+            self.run(expr.elseBranch)
 
     def visit_unary_expr(self, expr: Unary):
         right = self.run(expr.right)
@@ -104,16 +123,32 @@ class Interpreter(ExprVisitor, StmtVisitor):
     def visit_print_stmt(self, expr: Print):
         print(self.stringify(self.run(expr.expr)))
 
-    def is_truthy(self, expr: Literal):
+    def visit_var_stmt(self, expr: Var):
+        value = None
+
+        if expr.initializer != None:
+            value = self.run(expr.initializer)
+
+        self.environment.define(expr.name, value)
+
+    def visit_assignment_expr(self, expr: Assign):
+        val = self.run(expr.value)
+        self.environment.set(expr.name, val)
+        return val
+
+    def visit_variable_expr(self, expr: Variable):
+        return self.environment.get(expr.name)
+
+    def is_truthy(self, object) -> bool:
         """
         Returns False if the value is either None or False
         Otherwise, return True
         """
-        if expr.value == None:
+        if object == None:
             return False
 
-        elif type(expr.value) == bool:
-            return expr.value
+        elif type(object) == bool:
+            return object
 
         else:
             return True
@@ -131,10 +166,10 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def check_number_operand(self, operator, operand):
         if type(operand.value) != float:
-            raise LoxRuntimeError(operator, "Operand must be a number.")
+            raise LoxRuntimeError(operator, "Operand must be a number")
 
     def check_number_operands(self, operator, left: Expr, right: Expr):
         if type(left) != float \
                 or type(right) != float:
 
-            raise LoxRuntimeError(operator, "Operands must be numbers.")
+            raise LoxRuntimeError("Operands must be numbers", operator)

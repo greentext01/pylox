@@ -42,6 +42,23 @@ class Grouping(Expr):
         return visitor.visit_grouping_expr(self)
 
 
+@dataclass
+class Variable(Expr):
+    name: Token
+
+    def accept(self, visitor):
+        return visitor.visit_variable_expr(self)
+
+
+@dataclass
+class Assign(Expr):
+    name: Token
+    value: Expr
+
+    def accept(self, visitor):
+        return visitor.visit_assignment_expr(self)
+
+
 class ExprVisitor:
     def visit_binary_expr(self, expr: Binary):
         pass
@@ -53,4 +70,10 @@ class ExprVisitor:
         pass
 
     def visit_grouping_expr(self, expr: Grouping):
+        pass
+
+    def visit_variable_expr(self, expr: Variable):
+        pass
+
+    def visit_assignment_expr(self, expr: Assign):
         pass

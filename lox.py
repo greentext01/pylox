@@ -3,39 +3,41 @@ from interpreter.lox_runtime_error import LoxRuntimeError
 from parser.parser import Parser
 import sys
 from scanner.scanner import Scanner
+from scanner.token import Token
+from scanner.token_type import TokenType as tt
 
 
 class Lox:
     has_error = False
 
     @classmethod
-    def error(self, line: int, message: str):
-        print(f"Error at line {line}: {message}")
+    def report(self, line: int, where: str, message: str):
+        print(f"[line {line}] Error{where}: {message}")
+        self.has_error = True
+
+    @classmethod
+    def error(self, token: Token, message: str):
+        if (token.type == tt.EOF):
+            self.report(token.line, f" at end", message)
+        else:
+            self.report(token.line, f" at '{token.lexeme}'", message)
+
         self.has_error = True
 
     def main(self):
         if len(sys.argv) < 2:
-            self.runShell()
+            print("Usage: python main.py [program]")
         else:
             self.runFile(sys.argv[1])
 
     def runFile(self, path: str):
         with open(path) as file:
-            self.run(file.read(), False)
+            self.run(file.read())
 
         if self.has_error:
             exit(1)
 
-    def runShell(self):
-        while True:
-            try:
-                self.run(input(">>> "), True)
-            except KeyboardInterrupt:
-                exit(0)
-            except BaseException as error:
-                print(error)
-
-    def run(self, source, repl):
+    def run(self, source):
         scanner = Scanner(source)
         tokens = scanner.scan()
 
@@ -48,7 +50,7 @@ class Lox:
         if self.has_error:
             return
 
-        interpreter = Interpreter(repl)
+        interpreter = Interpreter()
         interpreter.interpret(tree)
 
         if self.has_error:
@@ -56,7 +58,7 @@ class Lox:
 
     @classmethod
     def runtime_error(self, error: LoxRuntimeError):
-        print(f"Error at line {error.token.line}:\n"
+        print(f"Error at line {error.token}:\n"
               f"{error.message}")
 
         self.has_error = True

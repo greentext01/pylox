@@ -116,7 +116,7 @@ class Scanner:
                 self.advance()
 
             if self.is_done():
-                lox.Lox.error(self.line, "Unterminated string")
+                lox.Lox.report(self.line, "Unterminated string")
 
             # Ending "
             self.advance()
@@ -153,7 +153,7 @@ class Scanner:
             self.add_token(keyword)
 
         else:
-            lox.Lox.error(self.line, f"Unexpected character '{c}'")
+            lox.Lox.report(self.line, f"Unexpected character '{c}'")
 
     def peek(self):
         """

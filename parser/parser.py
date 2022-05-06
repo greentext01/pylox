@@ -1,8 +1,8 @@
-from parser.expr import Binary, Grouping, Literal, Unary
+from parser.expr import Assign, Binary, Grouping, Literal, Unary, Variable
 from parser.parsing_error import ParseError
 
 import lox
-from parser.stmt import Expression, Print
+from parser.stmt import Block, Expression, If, Print, Var
 from scanner.token import Token
 from scanner.token_type import TokenType as tt
 
@@ -17,17 +17,52 @@ class Parser:
             statements = []
 
             while not self.is_done():
-                statements.append(self.statement())
+                statements.append(self.declaration())
 
             return statements
         except ParseError:
             return None
 
+    def declaration(self):
+        if self.match(tt.VAR):
+            return self.var_declaration()
+        else:
+            return self.statement()
+
+    def var_declaration(self):
+        name = self.expect(tt.IDENTIFIER, "Expected variable name")
+        initializer = None
+
+        if self.match(tt.EQUAL):
+            initializer = self.expression()
+
+        self.expect(
+            tt.SEMICOLON, "Expected ';' after variable declaration")
+
+        return Var(name, initializer)
+
     def statement(self):
         if self.match(tt.PRINT):
             return self.print_statement()
+        elif self.match(tt.LEFT_BRACE):
+            return Block(self.block())
+        elif self.match(tt.IF):
+            return self.if_statement()
         else:
             return self.expression_statement()
+        
+    def if_statement(self):
+        self.expect(tt.LEFT_PAREN, "Expected '(' after 'if'")
+        condition = self.expression()
+        self.expect(tt.RIGHT_PAREN, "Expected ')' after if condition")
+        
+        thenBranch = self.statement()
+        elseBranch = None
+        
+        if self.match(tt.ELSE):
+            elseBranch = self.statement()
+        
+        return If(condition, thenBranch, elseBranch)
 
     def print_statement(self):
         expr = self.expression()
@@ -39,8 +74,35 @@ class Parser:
         self.expect(tt.SEMICOLON, "Expected ';' after expression")
         return Expression(expr)
 
+    def block(self):
+        statements = []
+
+        while not self.check(tt.RIGHT_BRACE) and not self.is_done():
+            statements.append(self.declaration())
+
+        self.expect(tt.RIGHT_BRACE, "Expect '}' after block")
+
+        return statements
+
     def expression(self):
-        return self.equality()
+        return self.assignment()
+
+    def assignment(self):
+        # Too hard to explain
+        # Just look at the book
+        # https://craftinginterpreters.com/statements-and-state.html
+        expr = self.equality()
+
+        if self.match(tt.EQUAL):
+            equals = self.previous()
+            value = self.assignment()
+
+            if type(expr) == Variable:
+                return Assign(expr.name, value)
+
+            self.error(equals, "Invalid assignment target")
+
+        return expr
 
     def equality(self):
         comparison = self.comparison()
@@ -106,6 +168,9 @@ class Parser:
             self.expect(tt.RIGHT_PAREN, "Expected ')' after expression")
             return Grouping(expr)
 
+        elif self.match(tt.IDENTIFIER):
+            return Variable(self.previous())
+
     def match(self, *expected: tt):
         if self.peek().type in expected:
             self.advance()
@@ -120,15 +185,16 @@ class Parser:
         if self.check(expected):
             return self.advance()
         else:
-            self.error(self.peek().line, error)
+            self.error(self.peek(), error)
 
-    def error(self, line: int, message: str):
-        lox.Lox.error(line, message)
+    def error(self, token: Token, message: str):
+        lox.Lox.error(token, message)
         return ParseError()
 
     def advance(self):
         if not self.is_done():
             self.current += 1
+            return self.previous()
 
     def peek(self):
         return self.tokens[self.current]

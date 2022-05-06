@@ -51,6 +51,16 @@ class Variable(Expr):
 
 
 @dataclass
+class Logical(Expr):
+    left: Expr
+    op: Token
+    right: Expr
+
+    def accept(self, visitor):
+        return visitor.visit_logical_expr(self)
+
+
+@dataclass
 class Assign(Expr):
     name: Token
     value: Expr
@@ -61,6 +71,9 @@ class Assign(Expr):
 
 class ExprVisitor:
     def visit_binary_expr(self, expr: Binary):
+        pass
+    
+    def visit_logical_expr(self, expr: Binary):
         pass
 
     def visit_unary_expr(self, expr: Unary):

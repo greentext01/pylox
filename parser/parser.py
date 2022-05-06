@@ -1,4 +1,4 @@
-from parser.expr import Assign, Binary, Grouping, Literal, Unary, Variable
+from parser.expr import Assign, Binary, Grouping, Literal, Logical, Unary, Variable
 from parser.parsing_error import ParseError
 
 import lox
@@ -50,18 +50,18 @@ class Parser:
             return self.if_statement()
         else:
             return self.expression_statement()
-        
+
     def if_statement(self):
         self.expect(tt.LEFT_PAREN, "Expected '(' after 'if'")
         condition = self.expression()
         self.expect(tt.RIGHT_PAREN, "Expected ')' after if condition")
-        
+
         thenBranch = self.statement()
         elseBranch = None
-        
+
         if self.match(tt.ELSE):
             elseBranch = self.statement()
-        
+
         return If(condition, thenBranch, elseBranch)
 
     def print_statement(self):
@@ -91,7 +91,7 @@ class Parser:
         # Too hard to explain
         # Just look at the book
         # https://craftinginterpreters.com/statements-and-state.html
-        expr = self.equality()
+        expr = self.logical_or()
 
         if self.match(tt.EQUAL):
             equals = self.previous()
@@ -101,6 +101,24 @@ class Parser:
                 return Assign(expr.name, value)
 
             self.error(equals, "Invalid assignment target")
+
+        return expr
+
+    def logical_or(self):
+        expr = self.logical_and()
+
+        while self.match(tt.OR):
+            op = self.previous()
+            expr = Logical(expr, op, self.logical_and())
+
+        return expr
+
+    def logical_and(self):
+        expr = self.equality()
+
+        while self.match(tt.AND):
+            op = self.previous()
+            expr = Logical(expr, op, self.equality())
 
         return expr
 

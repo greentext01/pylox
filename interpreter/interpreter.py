@@ -1,3 +1,4 @@
+from ast import operator
 from interpreter.environment import Environment
 from interpreter.lox_runtime_error import LoxRuntimeError
 from parser.expr import Assign, Binary, Expr, Literal, Unary, ExprVisitor, Grouping, Variable
@@ -56,6 +57,18 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
         elif expr.op.type == tt.BANG:
             return not self.is_truthy(right)
+
+    def visit_logical_expr(self, expr: Binary):
+        left = self.run(expr.left)
+
+        if expr.op.type == tt.OR:
+            if self.is_truthy(left):
+                return left
+        else:
+            if not self.is_truthy(left):
+                return left
+
+        return self.run(expr.right)
 
     def visit_binary_expr(self, expr: Binary):
         right = self.run(expr.right)

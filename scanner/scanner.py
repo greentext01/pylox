@@ -70,6 +70,9 @@ class Scanner:
         elif c == "+":
             self.add_token(tt.PLUS)
 
+        elif c == "%":
+            self.add_token(tt.MODULO)
+
         elif c == ";":
             self.add_token(tt.SEMICOLON)
 
@@ -116,7 +119,7 @@ class Scanner:
                 self.advance()
 
             if self.is_done():
-                lox.Lox.report(self.line, "Unterminated string")
+                lox.Lox.report(self.line, None, "Unterminated string")
 
             # Ending "
             self.advance()
@@ -153,7 +156,7 @@ class Scanner:
             self.add_token(keyword)
 
         else:
-            lox.Lox.report(self.line, f"Unexpected character '{c}'")
+            lox.Lox.report(self.line, None, f"Unexpected character '{c}'")
 
     def peek(self):
         """

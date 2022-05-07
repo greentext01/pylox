@@ -27,6 +27,15 @@ class Unary(Expr):
 
 
 @dataclass
+class Call(Expr):
+    callee: Token
+    paren: Token
+    arguments: list[Expr]
+
+    def accept(self, visitor):
+        return visitor.visit_unary_expr(self)
+
+@dataclass
 class Literal(Expr):
     value: any
 
@@ -89,4 +98,7 @@ class ExprVisitor:
         pass
 
     def visit_assignment_expr(self, expr: Assign):
+        pass
+
+    def visit_call_expr(self, expr: Call):
         pass

@@ -58,7 +58,7 @@ class Lox:
 
     @classmethod
     def runtime_error(self, error: LoxRuntimeError):
-        print(f"Error at line {error.token}:\n"
+        print(f"Error at line {error.token.line}:\n"
               f"{error.message}")
-
-        self.has_error = True
+        
+        exit(1)

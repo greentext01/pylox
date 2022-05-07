@@ -22,7 +22,7 @@ class Environment:
                                   f"'{name.lexeme}'", name)
         else:
             self.variables[name.lexeme] = value
-            
+
     def set(self, name: Token, value):
         if name.lexeme in self.variables:
             self.variables[name.lexeme] = value
@@ -31,4 +31,3 @@ class Environment:
         else:
             raise LoxRuntimeError(f"Undefined variable "
                                   f"'{name.lexeme}'", name)
-        

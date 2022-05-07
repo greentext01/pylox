@@ -3,6 +3,14 @@ from parser.expr import Expr
 from scanner.token import Token
 
 
+class LoxCallable:
+    def call(self, interpreter, args):
+        pass
+
+    def arity(self) -> int:
+        pass
+
+
 class Stmt:
     def accept(self, visitor):
         pass
@@ -51,6 +59,25 @@ class If(Stmt):
         return visitor.visit_if_stmt(self)
 
 
+@dataclass
+class While(Stmt):
+    condition: Expr
+    body: Stmt
+
+    def accept(self, visitor):
+        return visitor.visit_while_stmt(self)
+
+
+@dataclass
+class Function(Stmt):
+    name: Token
+    body: list[Stmt]
+    arguments: list[Expr]
+
+    def accept(self, visitor):
+        return visitor.visit_unary_expr(self)
+
+
 class StmtVisitor:
     def visit_expression_stmt(self, expr: Expression):
         pass
@@ -61,8 +88,14 @@ class StmtVisitor:
     def visit_var_stmt(self, expr: Var):
         pass
 
-    def visit_block_stmt(self, expr: Var):
+    def visit_block_stmt(self, expr: Block):
         pass
 
-    def visit_if_stmt(self, expr: Var):
+    def visit_if_stmt(self, expr: If):
+        pass
+
+    def visit_while_stmt(self, expr: While):
+        pass
+
+    def visit_function_stmt(self, expr: Function):
         pass

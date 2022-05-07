@@ -1,8 +1,10 @@
-from parser.expr import Assign, Binary, Grouping, Literal, Logical, Unary, Variable
+from ast import arg
+from unittest import mock
+from parser.expr import Assign, Binary, Call, Expr, Grouping, Literal, Logical, LoxCallable, Unary, Variable
 from parser.parsing_error import ParseError
 
 import lox
-from parser.stmt import Block, Expression, If, Print, Var
+from parser.stmt import Block, Expression, Function, If, Print, Var, While
 from scanner.token import Token
 from scanner.token_type import TokenType as tt
 
@@ -26,6 +28,8 @@ class Parser:
     def declaration(self):
         if self.match(tt.VAR):
             return self.var_declaration()
+        if self.match(tt.FUN):
+            return self.function()
         else:
             return self.statement()
 
@@ -41,6 +45,25 @@ class Parser:
 
         return Var(name, initializer)
 
+    def function(self, kind):
+        name = self.expect(tt.IDENTIFIER, f"Expected {kind} name")
+
+        arguments = []
+        self.expect(tt.RIGHT_PAREN,
+                    f"Expected '(' after {kind} name")
+
+        while True:
+            arguments.append(self.expression())
+
+            if not self.match(tt.SEMICOLON):
+                break
+
+        self.expect(tt.LEFT_BRACE, f"Expecred '{{' after {kind} arguments")
+
+        body = self.block()
+
+        return Function(name, body, arguments)
+
     def statement(self):
         if self.match(tt.PRINT):
             return self.print_statement()
@@ -48,8 +71,55 @@ class Parser:
             return Block(self.block())
         elif self.match(tt.IF):
             return self.if_statement()
+        elif self.match(tt.WHILE):
+            return self.while_statement()
+        elif self.match(tt.FOR):
+            return self.for_statement()
         else:
             return self.expression_statement()
+
+    def while_statement(self):
+        self.expect(tt.LEFT_PAREN, "Expected '(' after 'while'")
+        condition = self.expression()
+        self.expect(tt.RIGHT_PAREN, "Expected ')' after while loop condition")
+
+        body = self.statement()
+
+        return While(condition, body)
+
+    def for_statement(self):
+        self.expect(tt.LEFT_PAREN, "Expected '(' after 'for'")
+
+        initializer = None
+
+        if self.match(tt.VAR):
+            initializer = self.var_declaration()
+        elif not self.match(tt.SEMICOLON):
+            initializer = self.expression_statement()
+
+        condition = None
+        if not self.check(tt.SEMICOLON):
+            condition = self.expression()
+
+        self.expect(tt.SEMICOLON, "Expected ';' after for loop condition")
+
+        increment = None
+        if not self.check(tt.SEMICOLON):
+            increment = self.expression()
+
+        self.expect(tt.RIGHT_PAREN, "Expected ')' after for loop clauses")
+
+        body = self.statement()
+
+        if increment != None:
+            body = Block([body, Expression(increment)])
+
+        body = While(condition or Literal(True), body)
+
+        if initializer != None:
+            body = Block([initializer, body])
+
+        return body
 
     def if_statement(self):
         self.expect(tt.LEFT_PAREN, "Expected '(' after 'if'")
@@ -154,7 +224,7 @@ class Parser:
     def factor(self):
         expr = self.unary()
 
-        while self.match(tt.STAR, tt.SLASH):
+        while self.match(tt.STAR, tt.SLASH, tt.MODULO):
             op = self.previous()
             expr = Binary(expr, op, self.unary())
 
@@ -166,7 +236,40 @@ class Parser:
             right = self.unary()
             return Unary(op, right)
         else:
-            return self.primary()
+            return self.call()
+
+    def call(self):
+        expr = self.primary()
+
+        while True:
+            if self.match(tt.LEFT_PAREN):
+                self.finish_call(expr)
+            else:
+                break
+
+        return expr
+
+    def finish_call(self, callee):
+        arguments = []
+
+        if not self.check(tt.RIGHT_PAREN):
+            while True:
+                if len(arguments) >= 255:
+                    self.error(
+                        self.peek(), "Can't have more than 255 arguments")
+
+                arguments.add(self.expression())
+
+                if not self.match(tt.COMMA):
+                    break
+
+        if len(arguments) != callee.arity():
+            self.error(self.callee, "")
+
+        paren = self.expect(tt.RIGHT_PAREN,
+                            "Expected ')' after arguments")
+
+        return Call(callee, paren, arguments)
 
     def primary(self):
         if self.match(tt.NUMBER, tt.STRING):

@@ -48,5 +48,6 @@ class TokenType(enum.Enum):
     TRUE = "TRUE"
     VAR = "VAR"
     WHILE = "WHILE"
+    MODULO = "MODULO"
 
     EOF = "EOF"

@@ -1,15 +1,18 @@
-from ast import operator
+from interpreter.clock import Clock
 from interpreter.environment import Environment
 from interpreter.lox_runtime_error import LoxRuntimeError
-from parser.expr import Assign, Binary, Expr, Literal, Unary, ExprVisitor, Grouping, Variable
-from parser.stmt import Block, Expression, If, Print, Stmt, StmtVisitor, Var
+from parser.expr import Assign, Binary, Call, Expr, Literal, Logical, LoxCallable, Unary, ExprVisitor, Grouping, Variable
+from parser.stmt import Block, Expression, Function, If, Print, Stmt, StmtVisitor, Var, While
 from scanner.token_type import TokenType as tt
 import lox
 
 
 class Interpreter(ExprVisitor, StmtVisitor):
     def __init__(self):
-        self.environment = Environment()
+        self.globals = Environment()
+        self.environment = self.globals
+
+        self.globals.define("clock", Clock())
 
     def interpret(self, stmts: list[Stmt]):
         try:
@@ -34,7 +37,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
             self.environment = previous
 
     def visit_block_stmt(self, expr: Block):
-        self.execute_block(expr.statements, Environment())
+        self.execute_block(expr.statements, Environment(self.environment))
 
     def visit_literal_expr(self, expr: Literal):
         return expr.value
@@ -58,7 +61,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
         elif expr.op.type == tt.BANG:
             return not self.is_truthy(right)
 
-    def visit_logical_expr(self, expr: Binary):
+    def visit_logical_expr(self, expr: Logical):
         left = self.run(expr.left)
 
         if expr.op.type == tt.OR:
@@ -104,6 +107,11 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
             return left / right
 
+        elif expr.op.type == tt.MODULO:
+            self.check_number_operands(expr.op, left,
+                                       right)
+            return left % right
+
         elif expr.op.type == tt.EQUAL_EQUAL:
             return left == right
 
@@ -144,10 +152,22 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
         self.environment.define(expr.name, value)
 
+    def visit_while_stmt(self, expr: While):
+        while(self.is_truthy(self.run(expr.condition))):
+            self.run(expr.body)
+
     def visit_assignment_expr(self, expr: Assign):
         val = self.run(expr.value)
         self.environment.set(expr.name, val)
         return val
+    
+    def visit_call_expr(self, expr: Call):
+        callee = self.run(expr.callee)
+        
+        arguments = 9
+    
+    def visit_function_stmt(self, expr: Function):
+        raise NotImplemented
 
     def visit_variable_expr(self, expr: Variable):
         return self.environment.get(expr.name)
